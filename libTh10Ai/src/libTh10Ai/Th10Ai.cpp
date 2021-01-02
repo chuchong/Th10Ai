@@ -244,7 +244,7 @@ namespace th
 	}
 
 	// 处理移动
-	bool Th10Ai::handleMove()
+	bool Th10Ai::handleMove_dfs()
 	{
 		if (!m_data.getPlayer().isNormalStatus())
 			return false;
@@ -284,6 +284,101 @@ namespace th
 
 		return true;
 	}
+
+	// 读表，处理移动
+	bool Th10Ai::handleMove()
+	{
+		if (!m_data.getPlayer().isNormalStatus())
+			return false;
+
+		//std::vector<Enemy> enemies = m_data.getEnemies();
+		std::vector<Bullet> bullets = m_data.getBullets();
+
+		Pointf player = m_data.getPlayer().getPosition();
+		// 坐标原点移到左上角
+		player.x += (Scene::SIZE.width / 2.0f);
+
+		// count bullet and enemy distribution
+		std::vector<int> region_dens(4);
+		// closest region
+		int min_dist_id = 0;
+		float min_dist = 100000;
+		int relative_dist_type = 0;
+		int id = 3 * int(player.x / (Scene::SIZE.width / 3)) + int(player.y / (Scene::SIZE.height / 3));
+
+		for (const Bullet& bullet : bullets)
+		{
+			if (!Scene::IsInScene(bullet.getPosition())) {
+				continue;
+			}
+			float x = bullet.x + (Scene::SIZE.width / 2.0f);
+			float y = bullet.y;
+			int bin = 0;
+			if (x >= player.x && y >= player.y) {
+				bin = 0;
+			}
+			else if (x < player.x && y >= player.y) {
+				bin = 1;
+			}
+			else if (x < player.x && y < player.y) {
+				bin = 2;
+			}
+			else {
+				bin = 3;
+			}
+			region_dens[bin] += 1;
+			float dist = abs(x - player.x) + abs(y - player.y);
+			if (dist < min_dist) {
+				min_dist_id = bin;
+				min_dist = dist;
+			}
+		}
+
+		float ratio = min_dist / (Scene::SIZE.width + Scene::SIZE.height);
+		if (ratio > 0.5) {
+			relative_dist_type = 0;
+		}
+		else if (ratio > 0.05) {
+			relative_dist_type = 1;
+		}
+		else {
+			relative_dist_type = 2;
+		}
+
+		if (relative_dist_type == 2) {
+			return handleMove_dfs();
+		}
+
+		int max_dense = -1;
+		int max_id = -1;
+		for (int i = 0; i < 4; i++) {
+			if (region_dens[i] > max_dense) {
+				max_dense = region_dens[i];
+				max_id = i;
+			}
+		}
+		int index = 48 * id + 16 * relative_dist_type + 4 * max_id + min_dist_id;
+		int policy[432] = { 2,1,3,3,0,3,3,0,1,0,1,2,2,3,0,1,2,3,1,1,2,2,1,1,3,1,1,3,0,2,0,3,2,0,1,1,3,1,1,1,1,0,2,3,1,0,3,3,1,2,2,1,3,0,0,2,3,0,1,0,1,1,0,2,1,3,1,1,3,3,1,2,2,1,0,3,3,1,2,0,2,3,2,2,2,1,1,1,2,0,0,0,3,1,1,2,3,2,0,1,1,2,2,1,0,3,0,2,2,1,0,0,3,1,1,3,3,3,0,2,2,1,0,2,2,2,3,1,3,1,3,2,2,1,2,0,1,3,0,0,0,0,1,2,0,2,0,3,1,0,1,2,3,0,0,3,0,3,1,1,2,3,3,2,1,1,3,2,2,3,1,0,3,2,1,3,0,3,3,0,2,1,3,1,2,3,1,2,3,3,2,2,2,2,3,1,2,1,1,3,1,3,0,3,3,2,3,2,0,3,1,2,3,1,3,3,2,3,0,3,0,3,3,1,3,0,3,1,0,0,3,0,3,0,3,1,3,2,1,1,0,1,1,1,0,3,3,2,0,3,0,3,2,3,2,3,0,3,1,3,2,3,2,0,0,0,0,0,3,2,0,3,2,0,3,0,2,2,0,2,2,3,3,0,0,0,3,1,0,2,1,0,3,1,2,1,0,1,1,1,2,1,0,1,2,0,0,2,0,1,1,3,0,1,1,1,0,3,1,1,0,3,0,0,0,2,3,1,3,1,0,1,3,1,1,1,2,2,3,3,0,1,1,3,3,3,1,1,2,2,2,3,3,3,0,0,2,0,1,3,3,0,2,1,2,0,1,1,0,3,3,3,2,3,2,2,0,0,3,0,3,3,1,3,1,0,1,3,1,3,2,1,3,3,2,1,0,1,1,1,3,1,2,0,1,2,1,3,2,0,2,1,2,3,0,0,1,3,3,1,1,1,2,1,0,3,2,1,1,0,2,1 };
+		switch (policy[index])
+		{
+		case 0:
+			move(DIR_UP, false);
+			break;
+		case 1:
+			move(DIR_DOWN, false);
+			break;
+		case 2:
+			move(DIR_LEFT, false);
+			break;
+		case 3:
+			move(DIR_RIGHT, false);
+			break;
+		default:
+			break;
+		}
+		return true;
+	}
+
 
 	void Th10Ai::move(Direction dir, bool slow)
 	{

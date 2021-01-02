@@ -30,6 +30,7 @@ namespace th
 		bool handleTalk();
 		bool handleShoot();
 		bool handleMove();
+		bool handleMove_dfs();
 
 		void move(Direction dir, bool slow);
 
