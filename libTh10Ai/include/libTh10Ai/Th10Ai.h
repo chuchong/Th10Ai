@@ -8,7 +8,7 @@
 #include "libTh10Ai/Reader.h"
 #include "libTh10Ai/Data.h"
 #include "libTh10Ai/Scene.h"
-
+#include "../LinearPlanner.h"
 namespace th
 {
 	class Th10Ai
@@ -47,6 +47,7 @@ namespace th
 		Data m_data;
 		Scene m_scene;
 
+		LinearPlanner planar;
 		bool p;
 	};
 }

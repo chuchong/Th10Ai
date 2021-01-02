@@ -1,5 +1,7 @@
 #pragma once
+#include "libTh10Ai/Common.h"
 
+#include "libTh10Ai/Direction.h"
 namespace th
 {
 	struct FootPoint
@@ -8,7 +10,7 @@ namespace th
 		Pointf pos;
 	};
 
-	// ÊµÌå½á¹¹
+	// å®ä½“ç»“æ„
 	// +-------+
 	// | (x,y) |
 	// |   +   | h
@@ -19,9 +21,9 @@ namespace th
 	{
 	public:
 		static float_t CalcDistance(const Pointf& A, const Pointf& B);
-		// ABÓëACµÄ¼Ğ½Ç
+		// ABä¸ACçš„å¤¹è§’
 		static float_t CalcAngle(const Pointf& A, const Pointf& B, const Pointf& C);
-		// µãCµ½Ïß¶ÎABµÄ´¹×ã
+		// ç‚¹Cåˆ°çº¿æ®µABçš„å‚è¶³
 		static FootPoint CalcFootPoint(const Pointf& A, const Pointf& B, const Pointf& C);
 
 		Entity();
@@ -53,7 +55,7 @@ namespace th
 
 		static const Direction SECTOR_TO_DIR[17];
 
-		float_t x;			// ×ø±êÔÚÖĞĞÄµã
+		float_t x;			// åæ ‡åœ¨ä¸­å¿ƒç‚¹
 		float_t y;
 		float_t dx;
 		float_t dy;

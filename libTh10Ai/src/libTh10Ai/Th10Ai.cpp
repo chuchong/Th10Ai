@@ -15,7 +15,7 @@ namespace th
 		m_bombCount(0),
 		m_prevDir(DIR_HOLD),
 		m_prevSlow(false),
-		m_data(m_reader), p(true)
+		m_data(m_reader), p(true), planar(Scene::SIZE.width - 16, Scene::SIZE.height)
 	{
 		m_scene.split(6);
 
@@ -29,6 +29,9 @@ namespace th
 		EnableMenuItem(menu, SC_CLOSE, MF_GRAYED | MF_BYCOMMAND);
 
 		m_thread = std::thread(&Th10Ai::run, this);
+		// TODO è¯»å…¥æ–‡ä»¶
+		std::cout << "initialize planar" << std::endl;
+		planar.initialize(std::string("D:/linear_weights"));
 	}
 
 	Th10Ai::~Th10Ai()
@@ -48,7 +51,7 @@ namespace th
 	{
 		try
 		{
-			std::cout << "Çë½«½¹µã·ÅÔÚ·çÉñÂ¼´°¿ÚÉÏ£¬¿ªÊ¼ÓÎÏ·£¬È»ºó°´A¿ªÆôAI£¬°´SÍ£Ö¹AI£¬°´DÍË³öAI¡£" << std::endl;
+			std::cout << "A to start AI, S to stop AI, D to quit AI" << std::endl;
 
 			while (!m_done)
 			{
@@ -73,7 +76,7 @@ namespace th
 			}
 
 			stop();
-			std::cout << "ÍË³öAI¡£" << std::endl;
+			std::cout << "exit AI" << std::endl;
 		}
 		catch (...)
 		{
@@ -103,7 +106,7 @@ namespace th
 			m_di8Hook.enable(true);
 
 			m_active = true;
-			std::cout << "¿ªÆôAI¡£" << std::endl;
+			std::cout << "startAI" << std::endl;
 		}
 	}
 
@@ -118,8 +121,8 @@ namespace th
 			m_d3d9Hook.enable(false);
 
 			m_active = false;
-			std::cout << "Í£Ö¹AI¡£" << std::endl;
-			std::cout << "¾öËÀ´ÎÊý£º" << m_bombCount << std::endl;
+			std::cout << "stop AI" << std::endl;
+			std::cout << "death:" << m_bombCount << std::endl;
 		}
 	}
 
@@ -132,7 +135,7 @@ namespace th
 		}
 
 		if (!m_d3d9Hook.waitPresent())
-			std::cout << "¶ÁÈ¡²»¼°Ê±¡£" << std::endl;
+			std::cout << "read is delay" << std::endl;
 
 		//static int_t fps = 0;
 		//static std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
@@ -190,7 +193,7 @@ namespace th
 		m_di8Hook.commit();
 	}
 
-	// ´¦ÀíÕ¨µ¯
+	// å¤„ç†ç‚¸å¼¹
 	bool Th10Ai::handleBomb()
 	{
 		if (m_data.getPlayer().isColliding())
@@ -203,7 +206,7 @@ namespace th
 
 			m_di8Hook.keyPress(DIK_X);
 			++m_bombCount;
-			std::cout << "¾öËÀ£º" << m_bombCount << std::endl;
+			std::cout << "death:" << m_bombCount << std::endl;
 			return true;
 		}
 		else
@@ -213,7 +216,7 @@ namespace th
 		}
 	}
 
-	// ´¦Àí¶Ô»°
+	// å¤„ç†å¯¹è¯
 	bool Th10Ai::handleTalk()
 	{
 		if (m_data.isTalking())
@@ -228,7 +231,7 @@ namespace th
 		}
 	}
 
-	// ´¦Àí¹¥»÷
+	// å¤„ç†æ”»å‡»
 	bool Th10Ai::handleShoot()
 	{
 		if (m_data.hasEnemy())
@@ -243,7 +246,7 @@ namespace th
 		}
 	}
 
-	// ´¦ÀíÒÆ¶¯
+	// å¤„ç†ç§»åŠ¨
 	bool Th10Ai::handleMove_dfs()
 	{
 		if (!m_data.getPlayer().isNormalStatus())
@@ -279,13 +282,13 @@ namespace th
 		else
 		{
 			move(DIR_HOLD, false);
-			std::cout << "ÎÞÂ·¿É×ß¡£" << std::endl;
+			std::cout << "no path be safe" << std::endl;
 		}
 
 		return true;
 	}
 
-	// ¶Á±í£¬´¦ÀíÒÆ¶¯
+	// è¯»è¡¨ï¼Œå¤„ç†ç§»åŠ¨
 	bool Th10Ai::handleMove()
 	{
 		if (!m_data.getPlayer().isNormalStatus())
@@ -295,71 +298,77 @@ namespace th
 		std::vector<Bullet> bullets = m_data.getBullets();
 
 		Pointf player = m_data.getPlayer().getPosition();
-		// ×ø±êÔ­µãÒÆµ½×óÉÏ½Ç
-		player.x += (Scene::SIZE.width / 2.0f);
 
-		// count bullet and enemy distribution
-		std::vector<int> region_dens(4);
-		// closest region
-		int min_dist_id = 0;
-		float min_dist = 100000;
-		int relative_dist_type = 0;
-		int id = 3 * int(player.x / (Scene::SIZE.width / 3)) + int(player.y / (Scene::SIZE.height / 3));
+		int action = planar.chooseAction(bullets, player.x, player.y);
 
-		for (const Bullet& bullet : bullets)
-		{
-			if (!Scene::IsInScene(bullet.getPosition())) {
-				continue;
-			}
-			float x = bullet.x + (Scene::SIZE.width / 2.0f);
-			float y = bullet.y;
-			int bin = 0;
-			if (x >= player.x && y >= player.y) {
-				bin = 0;
-			}
-			else if (x < player.x && y >= player.y) {
-				bin = 1;
-			}
-			else if (x < player.x && y < player.y) {
-				bin = 2;
-			}
-			else {
-				bin = 3;
-			}
-			region_dens[bin] += 1;
-			float dist = abs(x - player.x) + abs(y - player.y);
-			if (dist < min_dist) {
-				min_dist_id = bin;
-				min_dist = dist;
-			}
-		}
+		// åæ ‡åŽŸç‚¹ç§»åˆ°å·¦ä¸Šè§’
+		//player.x += (Scene::SIZE.width / 2.0f);
 
-		float ratio = min_dist / (Scene::SIZE.width + Scene::SIZE.height);
-		if (ratio > 0.5) {
-			relative_dist_type = 0;
-		}
-		else if (ratio > 0.05) {
-			relative_dist_type = 1;
-		}
-		else {
-			relative_dist_type = 2;
-		}
+		//// count bullet and enemy distribution
+		//std::vector<int> region_dens(4);
+		//// closest region
+		//int min_dist_id = 0;
+		//float min_dist = 100000;
+		//int relative_dist_type = 0;
+		//int id = 3 * int(player.x / (Scene::SIZE.width / 3)) + int(player.y / (Scene::SIZE.height / 3));
 
-		if (relative_dist_type == 2) {
-			return handleMove_dfs();
-		}
+		//for (const Bullet& bullet : bullets)
+		//{
+		//	if (!Scene::IsInScene(bullet.getPosition())) {
+		//		continue;
+		//	}
+		//	float x = bullet.x + (Scene::SIZE.width / 2.0f);
+		//	float y = bullet.y;
+		//	int bin = 0;
+		//	if (x >= player.x && y >= player.y) {
+		//		bin = 0;
+		//	}
+		//	else if (x < player.x && y >= player.y) {
+		//		bin = 1;
+		//	}
+		//	else if (x < player.x && y < player.y) {
+		//		bin = 2;
+		//	}
+		//	else {
+		//		bin = 3;
+		//	}
+		//	region_dens[bin] += 1;
+		//	float dist = abs(x - player.x) + abs(y - player.y);
+		//	if (dist < min_dist) {
+		//		min_dist_id = bin;
+		//		min_dist = dist;
+		//	}
+		//}
 
-		int max_dense = -1;
-		int max_id = -1;
-		for (int i = 0; i < 4; i++) {
-			if (region_dens[i] > max_dense) {
-				max_dense = region_dens[i];
-				max_id = i;
-			}
-		}
-		int index = 48 * id + 16 * relative_dist_type + 4 * max_id + min_dist_id;
-		int policy[432] = { 2,1,3,3,0,3,3,0,1,0,1,2,2,3,0,1,2,3,1,1,2,2,1,1,3,1,1,3,0,2,0,3,2,0,1,1,3,1,1,1,1,0,2,3,1,0,3,3,1,2,2,1,3,0,0,2,3,0,1,0,1,1,0,2,1,3,1,1,3,3,1,2,2,1,0,3,3,1,2,0,2,3,2,2,2,1,1,1,2,0,0,0,3,1,1,2,3,2,0,1,1,2,2,1,0,3,0,2,2,1,0,0,3,1,1,3,3,3,0,2,2,1,0,2,2,2,3,1,3,1,3,2,2,1,2,0,1,3,0,0,0,0,1,2,0,2,0,3,1,0,1,2,3,0,0,3,0,3,1,1,2,3,3,2,1,1,3,2,2,3,1,0,3,2,1,3,0,3,3,0,2,1,3,1,2,3,1,2,3,3,2,2,2,2,3,1,2,1,1,3,1,3,0,3,3,2,3,2,0,3,1,2,3,1,3,3,2,3,0,3,0,3,3,1,3,0,3,1,0,0,3,0,3,0,3,1,3,2,1,1,0,1,1,1,0,3,3,2,0,3,0,3,2,3,2,3,0,3,1,3,2,3,2,0,0,0,0,0,3,2,0,3,2,0,3,0,2,2,0,2,2,3,3,0,0,0,3,1,0,2,1,0,3,1,2,1,0,1,1,1,2,1,0,1,2,0,0,2,0,1,1,3,0,1,1,1,0,3,1,1,0,3,0,0,0,2,3,1,3,1,0,1,3,1,1,1,2,2,3,3,0,1,1,3,3,3,1,1,2,2,2,3,3,3,0,0,2,0,1,3,3,0,2,1,2,0,1,1,0,3,3,3,2,3,2,2,0,0,3,0,3,3,1,3,1,0,1,3,1,3,2,1,3,3,2,1,0,1,1,1,3,1,2,0,1,2,1,3,2,0,2,1,2,3,0,0,1,3,3,1,1,1,2,1,0,3,2,1,1,0,2,1 };
-		switch (policy[index])
+		//float ratio = min_dist / (Scene::SIZE.width + Scene::SIZE.height);
+		//if (ratio > 0.5) {
+		//	relative_dist_type = 0;
+		//}
+		//else if (ratio > 0.05) {
+		//	relative_dist_type = 1;
+		//}
+		//else {
+		//	relative_dist_type = 2;
+		//}
+
+		//if (relative_dist_type == 2) {
+		//	return handleMove_dfs();
+		//}
+
+		//int max_dense = -1;
+		//int max_id = -1;
+		//for (int i = 0; i < 4; i++) {
+		//	if (region_dens[i] > max_dense) {
+		//		max_dense = region_dens[i];
+		//		max_id = i;
+		//	}
+		//}
+		//int index = 48 * id + 16 * relative_dist_type + 4 * max_id + min_dist_id;
+		//int policy[432] = { 2,1,3,3,0,3,3,0,1,0,1,2,2,3,0,1,2,3,1,1,2,2,1,1,3,1,1,3,0,2,0,3,2,0,1,1,3,1,1,1,1,0,2,3,1,0,3,3,1,2,2,1,3,0,0,2,3,0,1,0,1,1,0,2,1,3,1,1,3,3,1,2,2,1,0,3,3,1,2,0,2,3,2,2,2,1,1,1,2,0,0,0,3,1,1,2,3,2,0,1,1,2,2,1,0,3,0,2,2,1,0,0,3,1,1,3,3,3,0,2,2,1,0,2,2,2,3,1,3,1,3,2,2,1,2,0,1,3,0,0,0,0,1,2,0,2,0,3,1,0,1,2,3,0,0,3,0,3,1,1,2,3,3,2,1,1,3,2,2,3,1,0,3,2,1,3,0,3,3,0,2,1,3,1,2,3,1,2,3,3,2,2,2,2,3,1,2,1,1,3,1,3,0,3,3,2,3,2,0,3,1,2,3,1,3,3,2,3,0,3,0,3,3,1,3,0,3,1,0,0,3,0,3,0,3,1,3,2,1,1,0,1,1,1,0,3,3,2,0,3,0,3,2,3,2,3,0,3,1,3,2,3,2,0,0,0,0,0,3,2,0,3,2,0,3,0,2,2,0,2,2,3,3,0,0,0,3,1,0,2,1,0,3,1,2,1,0,1,1,1,2,1,0,1,2,0,0,2,0,1,1,3,0,1,1,1,0,3,1,1,0,3,0,0,0,2,3,1,3,1,0,1,3,1,1,1,2,2,3,3,0,1,1,3,3,3,1,1,2,2,2,3,3,3,0,0,2,0,1,3,3,0,2,1,2,0,1,1,0,3,3,3,2,3,2,2,0,0,3,0,3,3,1,3,1,0,1,3,1,3,2,1,3,3,2,1,0,1,1,1,3,1,2,0,1,2,1,3,2,0,2,1,2,3,0,0,1,3,3,1,1,1,2,1,0,3,2,1,1,0,2,1 };
+		//int action = policy[index];
+
+		
+		switch (action)
 		{
 		case 0:
 			move(DIR_UP, false);
