@@ -7,6 +7,7 @@
 #include "libTh10Ai/libTh10Ai.h"
 #include "libTh10Ai/Path.h"
 
+#include <direct.h>
 namespace th
 {
 	Th10Ai::Th10Ai() :
@@ -31,7 +32,8 @@ namespace th
 		m_thread = std::thread(&Th10Ai::run, this);
 		// TODO 读入文件
 		std::cout << "initialize planar" << std::endl;
-		planar.initialize(std::string("D:/linear_weights"));
+		char * current_fir =  getcwd(NULL, 0);
+		planar.initialize(std::string("linear_weights"));
 	}
 
 	Th10Ai::~Th10Ai()
@@ -299,9 +301,23 @@ namespace th
 
 		Pointf player = m_data.getPlayer().getPosition();
 
+		//// 方法1 dfs 
+		//return handleMove_dfs();	
+
+		 // 方法2, linear based
+		for (const Bullet& bullet : bullets) {
+			float dist = abs(bullet.x - player.x) + abs(bullet.y - player.y);
+			float ratio = dist / (Scene::SIZE.width + Scene::SIZE.height);
+
+			if (ratio < 0.05) {
+				return handleMove_dfs();
+			}
+		}
+
 		int action = planar.chooseAction(bullets, player.x, player.y);
 
-		// 坐标原点移到左上角
+		// 方法3 tabular
+		//坐标原点移到左上角
 		//player.x += (Scene::SIZE.width / 2.0f);
 
 		//// count bullet and enemy distribution
@@ -351,9 +367,9 @@ namespace th
 		//	relative_dist_type = 2;
 		//}
 
-		//if (relative_dist_type == 2) {
-		//	return handleMove_dfs();
-		//}
+		////if (relative_dist_type == 2) {
+		////	return handleMove_dfs();
+		////}
 
 		//int max_dense = -1;
 		//int max_id = -1;

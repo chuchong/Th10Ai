@@ -28,7 +28,7 @@ int LinearPlanner::initialize(std::string filename)
 			this->weights[i].push_back(var);
 		}
 	}
-	std::cout << "read down" << this->weights[0][0] << std::endl;
+	std::cout << "read down"  << std::endl;
 	return 0;
 }
 
@@ -90,8 +90,8 @@ int LinearPlanner::chooseAction(std::vector<th::Bullet>& bullets, float player_x
 		feature_map[i + region_dens_offset] /= (feature_map[i + region_area_offset] * s);
 	}
 
-	std::cout << "feature_map" << std::endl;
-	for (int i = 0; i < size; i++) std::cout << "f:" << feature_map[i] << std::endl;
+	//std::cout << "feature_map" << std::endl;
+	//for (int i = 0; i < size; i++) std::cout << "f:" << feature_map[i] << std::endl;
 
 	int best_action = 3;
 	double best_reward = -1000000;
